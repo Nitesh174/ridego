@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>RideGo Map (Ultimate)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>📍 RideGo Live Map</h2>
+
+    <div id="map"></div>
+    <button onclick="bookRide()">🚖 Book Ride</button>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        let map = L.map('map').setView([28.7041, 77.1025], 12);
+
+        // ✅ FIXED TILE
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap & Carto',
+            maxZoom: 19
+        }).addTo(map);
+
+        let pickup = null;
+        let drop = null;
+        let pickupMarker, dropMarker, line;
+
+        let driverMarker = null;
+        let rideId = null;
+        let trackingInterval = null;
+        let currentLatLng = null;
+
+        // URL ride_id
+        const params = new URLSearchParams(window.location.search);
+        rideId = params.get("ride_id");
+
+        if (rideId) {
+            trackDriver();
+        }
+
+        // MAP CLICK
+        map.on('click', function (e) {
+
+            if (!pickup) {
+                pickup = e.latlng;
+                pickupMarker = L.marker(pickup).addTo(map).bindPopup("📍 Pickup").openPopup();
+
+            } else if (!drop) {
+                drop = e.latlng;
+                dropMarker = L.marker(drop).addTo(map).bindPopup("🏁 Drop").openPopup();
+                drawLine();
+
+            } else {
+                location.reload();
+            }
+        });
+
+        // ROUTE
+        function drawLine() {
+
+            if (line) map.removeLayer(line);
+
+            let url = `https://router.project-osrm.org/route/v1/driving/` +
+                `${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?overview=full&geometries=geojson`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+
+                    let route = data.routes[0].geometry.coordinates;
+                    let latlngs = route.map(c => [c[1], c[0]]);
+
+                    line = L.polyline(latlngs, { color: 'blue', weight: 5 }).addTo(map);
+                    map.fitBounds(line.getBounds());
+
+                    let distance = data.routes[0].distance / 1000;
+                    let duration = data.routes[0].duration / 60;
+
+                    alert(
+                        "📏 Distance: " + distance.toFixed(2) + " km\n" +
+                        "⏱ ETA: " + duration.toFixed(1) + " min"
+                    );
+                });
+        }
+
+        // 🚖 BOOK RIDE (FIXED)
+        function bookRide() {
+
+            if (!pickup || !drop) {
+                alert("Select pickup & drop first");
+                return;
+            }
+
+            fetch("http://127.0.0.1:8000/book-ride/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    user: 1,
+                    pickup_lat: pickup.lat,
+                    pickup_lon: pickup.lng,
+                    drop_lat: drop.lat,
+                    drop_lon: drop.lng
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+
+                    console.log("API:", data);
+
+                    if (data.ride && data.ride.id) {
+
+                        rideId = data.ride.id;
+
+                        alert("✅ Ride Booked 🚖");
+
+                        window.location.href = `/payment/${rideId}/`;
+
+                    } else {
+                        alert("❌ Ride failed");
+                    }
+
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Server error ❌");
+                });
+        }
+
+        // 🚖 TRACK DRIVER
+        function trackDriver() {
+
+            if (trackingInterval) clearInterval(trackingInterval);
+
+            trackingInterval = setInterval(() => {
+
+                fetch(`/track-ride/${rideId}/`)
+                    .then(res => res.json())
+                    .then(data => {
+
+                        let newLatLng = [data.latitude, data.longitude];
+
+                        if (!driverMarker) {
+                            driverMarker = L.marker(newLatLng).addTo(map);
+                            currentLatLng = newLatLng;
+                            return;
+                        }
+
+                        let steps = 20;
+                        let latStep = (newLatLng[0] - currentLatLng[0]) / steps;
+                        let lngStep = (newLatLng[1] - currentLatLng[1]) / steps;
+
+                        let i = 0;
+
+                        let move = setInterval(() => {
+
+                            if (i >= steps) {
+                                clearInterval(move);
+                                currentLatLng = newLatLng;
+                                return;
+                            }
+
+                            currentLatLng = [
+                                currentLatLng[0] + latStep,
+                                currentLatLng[1] + lngStep
+                            ];
+
+                            driverMarker.setLatLng(currentLatLng);
+                            map.panTo(currentLatLng);
+
+                            i++;
+
+                        }, 100);
+
+                    });
+
+            }, 5000);
+        }
+    </script>
+
+</body>
+
+</html>

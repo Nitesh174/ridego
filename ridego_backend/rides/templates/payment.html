@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>RideGo Payment</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+
+<body>
+
+    <h2>Ride Payment</h2>
+
+    <p>Ride ID: <span id="ride_id">{{ ride_id }}</span></p>
+    <p>Amount: ₹<span id="amount">{{ amount }}</span></p>
+
+    <button onclick="payNow()">Pay Now 💳</button>
+
+    <script>
+        function payNow() {
+
+            let ride_id = document.getElementById("ride_id").innerText;
+
+            fetch(`/create-payment/${ride_id}/`, {
+                method: "POST"
+            })
+                .then(res => res.json())
+                .then(data => {
+
+                    var options = {
+                        "key": data.key,
+                        "amount": data.amount,
+                        "currency": "INR",
+                        "name": "RideGo",
+                        "description": "Ride Payment",
+                        "order_id": data.order_id,
+
+                        "handler": function (response) {
+
+                            alert("Payment Successful ✅");
+
+                            let ride_id = document.getElementById("ride_id").innerText;
+
+                            fetch("/complete-ride/", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    "ride_id": ride_id
+                                })
+                            })
+                                .then(res => res.json())
+                                .then(data => {
+                                    console.log(data);
+                                    alert("Ride Completed 🚖");
+                                    window.location.href = "/";
+                                });
+
+                        }
+                    };
+
+                    var rzp = new Razorpay(options);
+                    rzp.open();
+                });
+        }
+    </script>
+
+</body>
+
+</html>
