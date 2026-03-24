@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>RideGo Payment</title>
+</head>
+
+<body>
+
+    <h2>💳 Ride Payment</h2>
+
+    <button onclick="payNow()">Pay Now ₹500</button>
+
+    <!-- Razorpay Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        function payNow() {
+
+            let ride_id = localStorage.getItem("ride_id");
+
+            var options = {
+                "key": "rzp_test_xxxxx", // 🔴 apna Razorpay test key daalo
+                "amount": 50000, // ₹500 (paise me)
+                "currency": "INR",
+                "name": "RideGo",
+                "description": "Ride Payment",
+
+                "handler": function (response) {
+
+                    alert("Payment Successful ✅");
+
+                    console.log("Payment ID:", response.razorpay_payment_id);
+
+                    // 👇 Future me backend verify karenge
+                    fetch("https://ridego-1.onrender.com/payment-success/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            ride_id: ride_id,
+                            payment_id: response.razorpay_payment_id
+                        })
+                    });
+
+                    window.location.href = "/success/";
+                },
+
+                "prefill": {
+                    "name": "RideGo User"
+                },
+
+                "theme": {
+                    "color": "#3399cc"
+                }
+            };
+
+            var rzp = new Razorpay(options);
+            rzp.open();
+        }
+    </script>
+
+</body>
+
+</html>
