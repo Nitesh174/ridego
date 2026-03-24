@@ -14,6 +14,8 @@ function App() {
 
   const [ride, setRide] = useState(null);
 
+  const BASE_URL = "https://ridego-1.onrender.com"; // 🔥 IMPORTANT
+
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -21,10 +23,10 @@ function App() {
     });
   };
 
-  // ✅ FIXED BOOK RIDE
+  // ✅ BOOK RIDE
   const bookRide = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/book-ride/", {
+      const res = await fetch(`${BASE_URL}/book-ride/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
@@ -32,9 +34,8 @@ function App() {
 
       const data = await res.json();
 
-      console.log("BOOK RESPONSE:", data); // 🔥 DEBUG
+      console.log("BOOK RESPONSE:", data);
 
-      // ✅ important fix
       setRide(data.ride || data);
 
     } catch (error) {
@@ -43,10 +44,10 @@ function App() {
     }
   };
 
-  // ✅ FIXED UPDATE RIDE
-  const updateRide = async (url) => {
+  // ✅ UPDATE RIDE (FIXED)
+  const updateRide = async (endpoint) => {
     try {
-      const res = await fetch(`"http://localhost:8000/book-ride/"${url}`, {
+      const res = await fetch(`${BASE_URL}/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ride_id: ride.id })
@@ -54,7 +55,7 @@ function App() {
 
       const data = await res.json();
 
-      console.log("UPDATE RESPONSE:", data); // 🔥 DEBUG
+      console.log("UPDATE RESPONSE:", data);
 
       setRide(data);
 
@@ -72,16 +73,16 @@ function App() {
       <div className="card p-4 shadow mb-4">
         <h4>Book Ride</h4>
 
-        <input className="form-control mb-2" name="user" placeholder="User ID (e.g. 1)" onChange={handleChange} />
+        <input className="form-control mb-2" name="user" placeholder="User ID" onChange={handleChange} />
 
         <input className="form-control mb-2" name="pickup_location" placeholder="Pickup Location" onChange={handleChange} />
         <input className="form-control mb-2" name="drop_location" placeholder="Drop Location" onChange={handleChange} />
 
-        <input className="form-control mb-2" name="pickup_lat" placeholder="Pickup Lat (28.6)" onChange={handleChange} />
-        <input className="form-control mb-2" name="pickup_lon" placeholder="Pickup Lon (77.2)" onChange={handleChange} />
+        <input className="form-control mb-2" name="pickup_lat" placeholder="Pickup Lat" onChange={handleChange} />
+        <input className="form-control mb-2" name="pickup_lon" placeholder="Pickup Lon" onChange={handleChange} />
 
-        <input className="form-control mb-2" name="drop_lat" placeholder="Drop Lat (28.7)" onChange={handleChange} />
-        <input className="form-control mb-2" name="drop_lon" placeholder="Drop Lon (77.3)" onChange={handleChange} />
+        <input className="form-control mb-2" name="drop_lat" placeholder="Drop Lat" onChange={handleChange} />
+        <input className="form-control mb-2" name="drop_lon" placeholder="Drop Lon" onChange={handleChange} />
 
         <button className="btn btn-primary w-100" onClick={bookRide}>
           Book Ride
@@ -96,7 +97,6 @@ function App() {
           <p><b>Status:</b> {ride.status || "N/A"}</p>
           <p><b>Fare:</b> ₹{ride.fare || "N/A"}</p>
 
-          {/* 🔥 NO DRIVER CASE */}
           {ride.message && (
             <p style={{ color: "red" }}>{ride.message}</p>
           )}
